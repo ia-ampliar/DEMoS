@@ -9,11 +9,16 @@ Input parameters:
 Output:
     Tiles and its path.
 """
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+
 import os
 import tqdm
 import pandas as pd
-from HEAL.Tiling import open_slide
-
+from Tiling import open_slide
 
 def tiling(_label_file, _test_file, _tile_size=1000, _tile_level=15):
     """

@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pickle
 import matplotlib
@@ -11,7 +15,7 @@ import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 import time
 import torchvision
-from HEAL.Training.pytorchtools import EarlyStopping
+from Training.pytorchtools import EarlyStopping
 
 
 plt.ion()   # interactive mode

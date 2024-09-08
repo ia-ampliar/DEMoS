@@ -1,3 +1,10 @@
+
+import sys
+import os
+
+# Adiciona o diretório raiz ao sys.path
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 """
@@ -17,13 +24,12 @@ from torch.optim import lr_scheduler
 from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
 
-from HEAL.Training import model_train
-from HEAL.Training import create_test_tiles
+from Training import model_train
+from Training import create_test_tiles
 
 import staintools
 #import pysnooper
 import pip
-
 
 def install(package):
     if hasattr(pip, 'main'):

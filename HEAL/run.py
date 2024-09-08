@@ -8,15 +8,20 @@ from HEAL.HEAL_APP import independent_test
 from HEAL.HEAL_APP import survival_analysis
 
 """
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import pickle
-from HEAL.Tiling import tiling
-from HEAL.Pre_processing import pre_processing
-from HEAL.Data_split import data_split
-from HEAL.Training import train
-from HEAL.Independent_test import independent_test
-from HEAL.Hyperparameter_optimisation import hyperparameter_optimisation
-from HEAL.Data_visualisation import data_visualisation
-from HEAL.Grad_Cam import grad_cam
+from Tiling import tiling
+from Pre_processing import pre_processing
+from Data_split import data_split
+from Training import train
+from Independent_test import independent_test
+from Hyperparameter_optimisation import hyperparameter_optimisation
+from Data_visualisation import data_visualisation
+from Grad_Cam import grad_cam
 
 
 def save_variable(var, filename):
@@ -85,23 +90,23 @@ def run(**kwargs):
     _extra_testing_pre_processing_enable = False
     for _key, _val in kwargs.items():
         # print(_key, _val)
-        if _key is "label_file":
+        if _key == "label_file":
             _label_file = _val
-        elif _key is "tile_info":
+        elif _key == "tile_info":
             _tile_info = _val
-        elif _key is "filter_model":
+        elif _key == "filter_model":
             _filter_model = _val
-        elif _key is "testing_label_file":
+        elif _key == "testing_label_file":
             _testing_label_file = _val
-        elif _key is "extra_testing_label_file":
+        elif _key == "extra_testing_label_file":
             _extra_test_file = _val
-        elif _key is "extra_testing_pre_processing_enable":
+        elif _key == "extra_testing_pre_processing_enable":
             _extra_testing_pre_processing_enable = _val
-        elif _key is "models":
+        elif _key == "models":
             _models = _val
-        elif _key is "training_mode":
+        elif _key == "training_mode":
             _training_mode = _val
-        elif _key is "procedure":
+        elif _key == "procedure":
             _procedure = _val
     _label_file_tiled = None
     if _label_file is not None:
@@ -113,33 +118,33 @@ def run(**kwargs):
 
     # Call the corresponding functions based on the specified procedures.
     for _proc in _procedure:
-        if _proc is "Tiling":
+        if _proc == "Tiling":
             print("[INFO] Start tiling ...")
             tiling.tiling(_label_file, _testing_label_file, _tile_size=_tile_info[0], _tile_level=_tile_info[1])
-        elif _proc is "Pre_processing":
+        elif _proc == "Pre_processing":
             print("[INFO] Image pre-processing: color correction and blur detection ...")
             pre_processing.pre_processing()
-        elif _proc is "Data_split":
+        elif _proc == "Data_split":
             print("[INFO] Data split ...")
             data_split.data_split(_label_file_tiled, _test_label_file_tiled)
-        elif _proc is "Hyperparameter_optimisation":
+        elif _proc == "Hyperparameter_optimisation":
             print("[INFO] Using HyperOpt to optimise the parameters ...")
             hyperparameter_optimisation.tuning()
-        elif _proc is "Training":
-            if _training_mode is "Single_round":
+        elif _proc == "Training":
+            if _training_mode == "Single_round":
                 print("[INFO] Training the model in single round mode ...")
                 train.train(_models, tile_size=_tile_info[0])
-            elif _training_mode is "Cross_validation":
+            elif _training_mode == "Cross_validation":
                 print("[INFO] Training the model in 10-fold cross-validation mode ...")
                 train.train(_models, tile_size=_tile_info[0], CV_Enable=True)
-        elif _proc is "Testing":
+        elif _proc == "Testing":
             print("[INFO] Running the independent test ...")
             independent_test.independent_test(_models, _tile_info, extra_test_set=_extra_test_file,
                                               pre_processing_enable=_extra_testing_pre_processing_enable)
-        elif _proc is "Data_visualisation":
+        elif _proc == "Data_visualisation":
             print("[INFO] Running the data visualisation ...")
             data_visualisation.data_visualisation(_tile_info)
-        elif _proc is "Grad_CAM":
+        elif _proc == "Grad_CAM":
             print("[INFO] Using Grad-CAM to visualize the key regions ...")
             grad_cam.grad_cam()
 
