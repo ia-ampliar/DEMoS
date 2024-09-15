@@ -120,6 +120,6 @@ if __name__ == "__main__":
         label_file="/home/rsb6/Desktop/Trabalho/DEMoS/HEAL/datas/label_file.csv",
         testing_label_file=None,
         models=['ResNet50'],
-        procedure=["Pre_processing"],
+        procedure=["Tiling"],
         tile_info=[256, 0]  # Exemplos de valores
     )
