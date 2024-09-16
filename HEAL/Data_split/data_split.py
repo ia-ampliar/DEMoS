@@ -43,20 +43,35 @@ def customized_drop(_df):
     return _df
 
 
-# Read csv files
+
 def read_files(train_label_file, test_label_file):
     MLMC = False
     train_df = pd.read_csv(train_label_file)
+    
+    # Verificar se o DataFrame está vazio
+    if train_df.empty:
+        raise ValueError("O arquivo de treinamento está vazio. Verifique o caminho ou o conteúdo do arquivo.")
+    
+    # Verificar se a coluna 'Label' está presente e não vazia
+    if 'Label' not in train_df.columns or train_df['Label'].isnull().all():
+        raise ValueError("A coluna 'Label' está ausente ou vazia no arquivo de treinamento.")
+    
     _tmp_label = list(train_df.iloc[:, 1])
     _class_category = []
 
     for _item in _tmp_label:
-        _item = _item.split(",")
+        # Verificar se _item é string antes de usar split
+        if isinstance(_item, str):
+            _item = _item.split(",")  # Apenas dividir se for string
+        else:
+            _item = [str(_item)]  # Caso contrário, transformar em lista com uma string
+
         for _cc in _item:
             _class_category.append(_cc)
+        
         if len(_item) > 1:
             MLMC = True
-
+    
     _class_category = list(set(list(_class_category)))
     tmp_dict = {"Mode": MLMC, "Classes": _class_category, "Class_number": len(_class_category)}
     save_variable(tmp_dict, "HEAL_Workspace/outputs/parameter.conf")
@@ -77,9 +92,13 @@ def read_files(train_label_file, test_label_file):
         print("The wrangled test file length is %d." % len(test_df))
 
     if not MLMC:
+        # Criar diretório se não existir
+        output_dir = "HEAL_Workspace/figures"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        
         plt.close('all')
         plt.style.use("ggplot")
-        #matplotlib.rcParams['font.family'] = "Arial"
         plt.xlabel("Class")
         plt.ylabel("Number of WSIs")
         plt.title("Data distribution of the Whole Slide Images (WSIs)")
@@ -87,12 +106,12 @@ def read_files(train_label_file, test_label_file):
         plt.hist(x=list(train_df.iloc[:, 1]), bins=np.arange(num_class+1)-0.5,
                  color='#0504aa', alpha=0.7, rwidth=0.5, align='mid')
         plt.grid(alpha=0.5, axis='y')
-        plt.savefig("HEAL_Workspace/figures/patient_vs_class_distribution.png", dpi = 400)
+        plt.savefig(os.path.join(output_dir, "patient_vs_class_distribution.png"), dpi=400)
         plt.clf()
         plt.cla()
         plt.close()
+    
     return train_df, test_df, MLMC
-
 
 def find_files(ori_folder_path, label):
     img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
@@ -137,47 +156,53 @@ def show_tiles_distribution(df):
     num_class = len(set(list(result_df.iloc[:, 1])))
     plt.hist(x=list(result_df.iloc[:, 1]), bins=np.arange(num_class+1)-0.5,
              color='#a0040a', alpha=0.7, rwidth=0.5, align='mid')
-    plt.grid(alpha=0.5, axis='y')
-    plt.savefig("HEAL_Workspace/figures/tile_vs_class_distribution.png", dpi = 400)
-    plt.clf()
-    plt.cla()
-    plt.close()
-
-
-# split data using index numbers']
 def split_data(train_df, test_df, test_ratio, MLMC):
     train_indices, test_indices, val_indices = [], [], []
     tmp_df = None
-    if test_df == None:
+
+    # Verificar se train_df tem dados
+    if train_df.empty:
+        raise ValueError("O DataFrame de treinamento está vazio.")
+
+    if test_df is None:
         if MLMC:
             split_train_vs_test = ShuffleSplit(n_splits=1, test_size=test_ratio)
             for train_index, test_index in split_train_vs_test.split(train_df):
                 train_indices = train_index
                 test_indices = test_index
         else:
+            if 'Image_path' not in train_df.columns or 'Label' not in train_df.columns:
+                raise ValueError("Colunas 'Image_path' ou 'Label' ausentes em train_df.")
+            
             split_train_vs_test = StratifiedShuffleSplit(n_splits=1, test_size=test_ratio)
             for train_index, test_index in split_train_vs_test.split(train_df['Image_path'], train_df['Label']):
                 train_indices = train_index
                 test_indices = test_index
 
-        tmp_df = train_df.iloc[train_indices].reset_index(drop = True)
+        tmp_df = train_df.iloc[train_indices].reset_index(drop=True)
         test_tmp_df = train_df.iloc[test_indices]
         test_tmp_df.to_csv("HEAL_Workspace/outputs/test_label_file_tiled.csv",
-                           encoding='utf-8', index = False)
+                           encoding='utf-8', index=False)
+        
         if MLMC:
             split_train_vs_val = ShuffleSplit(n_splits=10, test_size=0.1)
-            train_indices = []
             for a, b in split_train_vs_val.split(tmp_df):
                 train_indices.append(list(a))
                 val_indices.append(list(b))
         else:
+            if 'Image_path' not in tmp_df.columns or 'Label' not in tmp_df.columns:
+                raise ValueError("Colunas 'Image_path' ou 'Label' ausentes em tmp_df.")
+                
             split_train_vs_val = StratifiedShuffleSplit(n_splits=10, test_size=0.1)
-            train_indices = []
             for a, b in split_train_vs_val.split(tmp_df['Image_path'], tmp_df['Label']):
                 train_indices.append(list(a))
                 val_indices.append(list(b))
 
     else:
+        # Verificar se train_df e test_df têm dados válidos
+        if train_df.empty or (not MLMC and ('Image_path' not in train_df.columns or 'Label' not in train_df.columns)):
+            raise ValueError("O DataFrame de treinamento está vazio ou colunas ausentes.")
+        
         try:
             if MLMC:
                 split_train_vs_val = ShuffleSplit(n_splits=10, test_size=0.1)
@@ -185,6 +210,9 @@ def split_data(train_df, test_df, test_ratio, MLMC):
                     train_indices.append(list(a))
                     val_indices.append(list(b))
             else:
+                if 'Image_path' not in train_df.columns or 'Label' not in train_df.columns:
+                    raise ValueError("Colunas 'Image_path' ou 'Label' ausentes em train_df.")
+                
                 split_train_vs_val = StratifiedShuffleSplit(n_splits=10, test_size=0.1)
                 for a, b in split_train_vs_val.split(train_df['Image_path'], train_df['Label']):
                     train_indices.append(list(a))
@@ -193,7 +221,9 @@ def split_data(train_df, test_df, test_ratio, MLMC):
         except Exception as e:
             print(e)
         test_indices = None
+
     return tmp_df, train_indices, test_indices, val_indices
+
 
 
 train_img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
@@ -248,7 +278,18 @@ def write_train_file(train_df, train_indices, val_indices):
 
 def data_split(train_label_file, test_label_file=None, test_ratio=0.2):
     train_df, test_df, MLMC = read_files(train_label_file, test_label_file)
+    
+    # Verificar se train_df não está vazio
+    if train_df.empty:
+        raise ValueError("O DataFrame de treinamento está vazio após a leitura do arquivo.")
+    
     if not MLMC:
         show_tiles_distribution(train_df)
+    
     tmp_df, train_indices, test_indices, val_indices = split_data(train_df, test_df, test_ratio, MLMC)
+    
+    # Verificar se os índices estão vazios
+    if not train_indices or (test_indices is None and not val_indices):
+        raise ValueError("Os índices resultantes da divisão de dados estão vazios.")
+
     write_train_file(tmp_df, train_indices, val_indices)
