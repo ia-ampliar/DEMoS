@@ -153,5 +153,4 @@ def grad_cam():
         heatmap = visualize(imgtt.cpu().detach(), cam.cpu().detach())
 
         save_image(heatmap, "HEAL_Workspace/figures/grad-cam/{}_{}_{}_{}.png".format(model_name, img_base, patient_id, _class_cate[idx]))
-
-    return
+        print("Grad-CAM visualization saved for image: {}".format(img_base))

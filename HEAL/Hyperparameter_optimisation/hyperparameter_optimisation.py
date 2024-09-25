@@ -82,6 +82,7 @@ def objective(args):
 
 trials = Trials()
 
+
 def tuning():
     best = fmin(objective,
                 space=space,
@@ -89,11 +90,40 @@ def tuning():
                 max_evals=30,
                 trials=trials)
     print("The best configuration is: " + str(best))
+    
     model_list = ['InceptionV3', 'ResNet50', 'Vgg16', 'ShuffleNetV2', 'MobileNetV2', 'MNASNET']
+    
+    # Verificar se 'model_architecture' está em 'best'
+    if 'model_architecture' not in best:
+        raise KeyError("'model_architecture' não encontrado em 'best'")
+    
     model_index = best['model_architecture']
-    lr = best["LR" + str(model_index+1)]
-    gamma = best["Gamma" + str(model_index+1)]
-    batch_size_index = best["Batch_size" + str(model_index+1)]
-    step_size_index = best["Step_size" + str(model_index+1)]
-    best_config = {'lr': lr,'gamma': gamma,'model_name': model_list[model_index], 'step_size': STEP_SIZE_LIST[step_size_index], 'batch_size': BATCH_LIST[batch_size_index]}
+    
+    # Verificar se o índice do modelo está dentro do intervalo válido
+    if model_index < 0 or model_index >= len(model_list):
+        raise IndexError("Índice do modelo fora do intervalo válido")
+    
+    lr = best.get("LR" + str(model_index+1))
+    gamma = best.get("Gamma" + str(model_index+1))
+    batch_size_index = best.get("Batch_size" + str(model_index+1))
+    step_size_index = best.get("Step_size" + str(model_index+1))
+    
+    # Verificar se todas as variáveis foram encontradas
+    if lr is None or gamma is None or batch_size_index is None or step_size_index is None:
+        raise KeyError("Uma ou mais chaves não foram encontradas em 'best'")
+    
+    # Verificar se os índices de batch_size e step_size estão dentro do intervalo válido
+    if batch_size_index < 0 or batch_size_index >= len(BATCH_LIST):
+        raise IndexError("Índice de batch_size fora do intervalo válido")
+    if step_size_index < 0 or step_size_index >= len(STEP_SIZE_LIST):
+        raise IndexError("Índice de step_size fora do intervalo válido")
+    
+    best_config = {
+        'lr': lr,
+        'gamma': gamma,
+        'model_name': model_list[model_index],
+        'step_size': STEP_SIZE_LIST[step_size_index],
+        'batch_size': BATCH_LIST[batch_size_index]
+    }
+    
     save_variable(best_config, "HEAL_Workspace/outputs/hyper_parameter.conf")

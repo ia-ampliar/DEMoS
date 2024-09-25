@@ -91,8 +91,8 @@ class ImageDataset(Dataset):
 
 
 def load_data(_class_cate, _class_number, _work_mode, bs):
-    train_img_label_df = pd.read_csv("HEAL_Workspace/outputs/train_fold_0.csv")
-    val_img_label_df = pd.read_csv("HEAL_Workspace/outputs/val_fold_0.csv")
+    train_img_label_df = pd.read_csv("HEAL_Workspace/outputs/train_fold_6.csv")
+    val_img_label_df = pd.read_csv("HEAL_Workspace/outputs/val_fold_6.csv")
     train_dataset = ImageDataset(dataframe=train_img_label_df, transform=train_data_transforms,
                                  class_cate=_class_cate, class_num=_class_number, mode=_work_mode)
     val_dataset = ImageDataset(dataframe=val_img_label_df, transform=data_transforms,

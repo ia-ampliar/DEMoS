@@ -282,7 +282,7 @@ def get_model(_model_name, _class_num, _mode):
             criterion = nn.CrossEntropyLoss()
         model = torch.nn.DataParallel(model)
         return model, criterion
-    ###InceptionV3###
+    ###InceptionV3###MobileNetV2
     elif _model_name == "InceptionV3":
         model = models.inception_v3(pretrained=False, aux_logits = False)
         num_ftrs = model.fc.in_features
@@ -308,7 +308,7 @@ def get_model(_model_name, _class_num, _mode):
         model = torch.nn.DataParallel(model)
         return model, criterion
     ###MobileNetV2###
-    elif _model_name == "MobileNetV2":
+    elif _model_name == "":
         model = models.mobilenet_v2(pretrained=False)
         num_ftrs = model.classifier[1].in_features
         features = list(model.classifier.children())[:-1]
