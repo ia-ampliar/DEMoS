@@ -88,7 +88,8 @@ def run(**kwargs):
             tiling.tiling(_label_file, _testing_label_file, _tile_size=_tile_info[0], _tile_level=_tile_info[1])
         elif _proc == "Pre_processing":
             print("[INFO] Image pre-processing: color correction and blur detection ...")
-            pre_processing.pre_processing()
+            _img_path_template = input("Please input the path of the template image: ")
+            pre_processing.pre_processing(_img_path_template=_img_path_template)
         elif _proc == "Data_split":
             print("[INFO] Data split ...")
             data_split.data_split(_label_file_tiled, _test_label_file_tiled)
@@ -121,7 +122,7 @@ if __name__ == "__main__":
         testing_label_file=None, 
         models=['ResNet50', 'Inception-V3'],
         training_mode="Cross_validation",
-        procedure=["Data_split"],
+        procedure=["Hyperparameter_optimisation"],
         tile_info=[256, 0],
         filter_model=None,
         extra_testing_label_file=None,

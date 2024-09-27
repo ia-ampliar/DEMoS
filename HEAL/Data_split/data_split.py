@@ -217,63 +217,50 @@ def split_data(train_df, test_df, test_ratio, MLMC):
 train_img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
 val_img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
 
-
 def write_train_file(train_df, train_indices, val_indices):
-
     train_val_df = pd.DataFrame(columns=['Image_path', 'Label', 'type', 'fold'])
-    print(train_df)
-    print(train_val_df)
+    
+    # Processa cada fold
     for i in range(10):
         train_index = train_indices[i]
         val_index = val_indices[i]
         train = train_df.iloc[train_index]
         val = train_df.iloc[val_index]
-        def append_result(result):
-            global train_img_label_df
-            train_img_label_df = pd.concat([train_img_label_df, result])
 
-        cpu_num = multiprocessing.cpu_count()
-        print("The CPU number of this machine is %d" % cpu_num)
-        pool = multiprocessing.Pool(int(cpu_num))
-        #pool = multiprocessing.Pool(16)
-
+        # Processa o conjunto de treinamento
+        global train_img_label_df
         for idx in tqdm.tqdm(range(len(train))):
             label = train.iloc[idx, 1]
             folder_path = train.iloc[idx, 0]
-            #if('F4' in folder_path.split('-')):
-            pool.apply_async(find_files, args = (folder_path, label), callback = append_result)
+            result = find_files(folder_path, label)
+            train_img_label_df = pd.concat([train_img_label_df, result])
 
-        pool.close()
-        pool.join()
-        global train_img_label_df
-        train_img_label_df.to_csv("HEAL_Workspace/outputs/train_fold_%d.csv" % i, encoding='utf-8', index=False)
+        # Salva o CSV com as imagens e rótulos
+        train_img_label_df.to_csv(f"HEAL_Workspace/outputs/train_fold_{i}.csv", encoding='utf-8', index=False)
         train_img_label_df = train_img_label_df.iloc[0:0]
 
-        cpu_num = multiprocessing.cpu_count()
-        print("The CPU number of this machine is %d" % cpu_num)
-        pool = multiprocessing.Pool(int(cpu_num))
-        #pool = multiprocessing.Pool(16)
-        def append_result(result):
-            global val_img_label_df
-            val_img_label_df = pd.concat([val_img_label_df, result])
+        # Processa o conjunto de validação
+        global val_img_label_df
         for idx in tqdm.tqdm(range(len(val))):
             label = val.iloc[idx, 1]
             folder_path = val.iloc[idx, 0]
-            pool.apply_async(find_files, args = (folder_path, label), callback = append_result)
-        pool.close()
-        pool.join()
-        global val_img_label_df
-        val_img_label_df.to_csv("HEAL_Workspace/outputs/val_fold_%d.csv" % i, encoding='utf-8', index=False)
+            result = find_files(folder_path, label)
+            val_img_label_df = pd.concat([val_img_label_df, result])
+
+        # Salva o CSV com as imagens e rótulos de validação
+        val_img_label_df.to_csv(f"HEAL_Workspace/outputs/val_fold_{i}.csv", encoding='utf-8', index=False)
         val_img_label_df = val_img_label_df.iloc[0:0]
+
 
 def data_split(train_label_file, test_label_file=None, test_ratio=0.2):
     train_df, test_df, MLMC = read_files(train_label_file, test_label_file)
-    print("train_df:", train_df)
-    print("test_df:", test_df)
+
+    # Verifique se o DataFrame train_df não está vazio
+    print(f"train_df shape: {train_df.shape}")
+    if train_df.empty:
+        raise ValueError("train_df está vazio. Verifique o arquivo de entrada.")
+
     if not MLMC:
         show_tiles_distribution(train_df)
     tmp_df, train_indices, test_indices, val_indices = split_data(train_df, test_df, test_ratio, MLMC)
-    print('train_indices:', train_indices)
-    print('test_indices:', test_indices)
-    print('val_indices:', val_indices)
     write_train_file(tmp_df, train_indices, val_indices)
