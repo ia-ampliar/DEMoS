@@ -118,8 +118,12 @@ def run(**kwargs):
 if __name__ == "__main__":
     run(
         label_file="/home/rsb6/Desktop/Trabalho/DEMoS/HEAL/datas/label_file.csv",
-        testing_label_file=None,
-        models=['ResNet50'],
-        procedure=["Tiling"],
-        tile_info=[256, 0]  # Exemplos de valores
+        testing_label_file=None, 
+        models=['ResNet50', 'Inception-V3'],
+        training_mode="Cross_validation",
+        procedure=["Data_split"],
+        tile_info=[256, 0],
+        filter_model=None,
+        extra_testing_label_file=None,
+        extra_testing_pre_processing_enable=False
     )
