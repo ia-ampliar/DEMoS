@@ -126,11 +126,25 @@ def main():
     parser.add_argument('--testing_label_file', type=str, default=None, 
                         help="(optional) Path to the testing label file. If not provided, the main label file will be used for testing.")
     parser.add_argument('--models', type=str, nargs='+', required=True, 
-                        help="(required) List of models to use for training and testing.")
+                        help=("(required) List of models to use for training and testing:"
+                                "AlexNet, DenseNet161, EFF-NET, GoogleNet, InceptionV3, MNASNET, "
+                                "MobileNetV2, ResNet101, ResNet152, ResNet18, ResNet34, ResNet50, "
+                                "ShuffleNetV2, Vgg16, Vgg16_BN, Vgg19, Vgg19_BN, WideResNet101, "
+                                "WideResNet50"
+                            ))
     parser.add_argument('--training_mode', type=str, choices=['Single_round', 'Cross_validation'], default='Single_round',
                         help="(optional) Training mode, either single_round or Cross_validation. Default is single_round.")
     parser.add_argument('--procedure', type=str, nargs='+', required=True, 
-                        help="(required) Procedure steps to run, specified as a list of strings.")
+                        help=("(required) Procedure steps to run, specified as a list of strings:"
+                                "Tiling: Divides the images into smaller tiles for processing."
+                                "Pre_processing: Prepares the images for analysis."
+                                "Data_split: Splits the data into training, validation, and testing sets."
+                                "Hyperparameter_optimisation: Optimises the hyperparameters of the model."
+                                "Training: Trains the model using the training data."
+                                "Testing: Tests the model using the testing data."
+                                "Data_visualisation: Visualises the processed data."
+                                "Grad_CAM: Uses Grad-CAM to visualise the key regions of the image."
+                            ))
     parser.add_argument('--tile_info', type=int, nargs=2, default=[1000, 0], 
                         help="(optional) Tile size and level, specified as two integers. Default is [1000, 0].")
     parser.add_argument('--filter_model', type=str, default=None, 
