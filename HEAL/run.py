@@ -21,7 +21,8 @@ def load_variable(filename):
     with open(filename, 'rb') as pickle_f:
         var = pickle.load(pickle_f)
     return var
-
+import argparse
+import os
 
 def run(**kwargs):
     """
@@ -31,9 +32,9 @@ def run(**kwargs):
         testing_label_file = None;
         models = ['ResNet50'];
         training_mode = "single_round";
-        procedure = ["Tiling", "Data_Split", "Training",  "Testing", "Survival_analysis"].
+        procedure = ["Tiling", "Pre_processing", "Data_Split", "Training",  "Hyperparameter_optimisation", "Testing", "Survival_analysis"].
 
-    **parameter description**
+    **Parameter description**
         1) label_file: (string) the file path of the input csv format file. The csv file
         contains two columns,
             col_1: "Image_path" (the image file paths of each patient)
@@ -116,15 +117,42 @@ def run(**kwargs):
 
     print(_label_file, _testing_label_file, _models, _training_mode, _procedure)
 
-if __name__ == "__main__":
+
+def main():
+    parser = argparse.ArgumentParser(description="Run the HEAL package pipeline for image analysis and model training.")
+    
+    parser.add_argument('--label_file', type=str, required=True, 
+                        help="(required) Path to the label file containing the training data.")
+    parser.add_argument('--testing_label_file', type=str, default=None, 
+                        help="(optional) Path to the testing label file. If not provided, the main label file will be used for testing.")
+    parser.add_argument('--models', type=str, nargs='+', required=True, 
+                        help="(required) List of models to use for training and testing.")
+    parser.add_argument('--training_mode', type=str, choices=['Single_round', 'Cross_validation'], default='Single_round',
+                        help="(optional) Training mode, either single_round or Cross_validation. Default is single_round.")
+    parser.add_argument('--procedure', type=str, nargs='+', required=True, 
+                        help="(required) Procedure steps to run, specified as a list of strings.")
+    parser.add_argument('--tile_info', type=int, nargs=2, default=[1000, 0], 
+                        help="(optional) Tile size and level, specified as two integers. Default is [1000, 0].")
+    parser.add_argument('--filter_model', type=str, default=None, 
+                        help="(optional) Model filtering criteria.")
+    parser.add_argument('--extra_testing_label_file', type=str, default=None, 
+                        help="(optional) Path to an additional testing label file.")
+    parser.add_argument('--extra_testing_pre_processing_enable', action='store_true', 
+                        help="(optional) Whether to enable pre-processing for the extra testing set.")
+    
+    args = parser.parse_args()
+    
     run(
-        label_file="/home/rsb6/Desktop/Trabalho/DEMoS/HEAL/datas/label_file.csv",
-        testing_label_file=None, 
-        models=['ResNet50', 'Inception-V3'],
-        training_mode="Cross_validation",
-        procedure=["Hyperparameter_optimisation"],
-        tile_info=[256, 0],
-        filter_model=None,
-        extra_testing_label_file=None,
-        extra_testing_pre_processing_enable=False
+        label_file=args.label_file,
+        testing_label_file=args.testing_label_file,
+        models=args.models,
+        training_mode=args.training_mode,
+        procedure=args.procedure,
+        tile_info=args.tile_info,
+        filter_model=args.filter_model,
+        extra_testing_label_file=args.extra_testing_label_file,
+        extra_testing_pre_processing_enable=args.extra_testing_pre_processing_enable
     )
+
+if __name__ == "__main__":
+    main()

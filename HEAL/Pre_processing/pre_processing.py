@@ -90,12 +90,13 @@ def blur_color_processing(_root, _img_path, _img, _img_path_template, _blur_thre
     return fm
 
 
+
+
 # Caminho relativo ao diretório do projeto
 relative_path = "DEMoS/HEAL/Pre_processing/n6.png"
 project_base = os.getcwd()
 # Construir o caminho absoluto
 absolute_path = os.path.join(project_base, relative_path)
-
 
 
 def pre_processing(extra_prefix="", _img_path_template = absolute_path):
