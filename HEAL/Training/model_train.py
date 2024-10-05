@@ -76,6 +76,8 @@ class MacroSoftF1Loss(nn.Module):
         macro_loss = loss.mean()
         return macro_loss
 
+import os
+from pathlib import Path
 
 def model_train(model, model_name, train_loader, val_loader, criterion, optimizer, scheduler, _mode, class_num, num_epochs=50, fn = 0):
     print("Model training start (%s) ..." % model_name)
@@ -88,26 +90,20 @@ def model_train(model, model_name, train_loader, val_loader, criterion, optimize
     avg_val_loss = []
     # initialize the early_stopping object
     patience = 5
-    early_stopping = EarlyStopping(patience=patience, verbose=True, path="HEAL_Workspace/models/%s_%s_fold%d.pt" % (jobid, model_name, fn))
+    model_dir = Path(f"HEAL_Workspace/models/")
+    model_dir.mkdir(parents=True, exist_ok=True)  # Verifica e cria o diretório de modelos se não existir
+    early_stopping = EarlyStopping(patience=patience, verbose=True, path=model_dir / f"{jobid}_{model_name}_fold{fn}.pt")
     model.to(device)
 
     for epoch in range(num_epochs):
         model.train()
         print("Current learning rate is %f" % optimizer.param_groups[0]["lr"])
         for i, sample in enumerate(train_loader, 0):
-            #print("The input is %s"%sample["image"])
             if(i == 3):
-                # create grid of images
                 images = sample["image"]
                 img_grid = torchvision.utils.make_grid(images)
-                # show images
-                # matplotlib_imshow(img_grid, one_channel=False)
-                # write to tensorboard
                 writer.add_image('Examples of training images_%d' % i, img_grid)
                 writer.flush()
-                
-#             if(i == 100):
-#                 break
 
             inputs = sample["image"].to(device)
             if _mode:
@@ -115,21 +111,13 @@ def model_train(model, model_name, train_loader, val_loader, criterion, optimize
             else:
                 labels = sample["label"].to(device)
                 labels_oh = torch.nn.functional.one_hot(sample["label"], num_classes=class_num).to(device)
-            #print("Label is %s"%labels)
-            # zero the parameter gradients
             optimizer.zero_grad()
-            # forward + backward + optimize
             outputs = model(inputs)
             loss = (criterion(outputs, labels) + criterion2(outputs, labels_oh))/2.0
             loss.backward()
             optimizer.step()
             training_loss.append(loss.item())
 
-########################################
-        #print(model)
-        #print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
-        #time.sleep(30)
-###################################
         model.eval()
         with torch.no_grad():
             for i, sample in enumerate(val_loader, 0):
@@ -149,41 +137,28 @@ def model_train(model, model_name, train_loader, val_loader, criterion, optimize
         avg_training_loss.append(training_loss_overall)
         avg_val_loss.append(val_loss_overall)
 
-        writer.add_scalar('%s_%s_train_batch_fold%d/train_loss' % (jobid, model_name, fn), training_loss_overall, epoch)
-        writer.add_scalar('%s_%s_train_batch_fold%d/val_loss' % (jobid, model_name, fn), val_loss_overall, epoch)
-        writer.add_scalar('%s_%s_train_batch_fold%d/learning_rate' % (jobid, model_name, fn), optimizer.param_groups[0]["lr"], epoch)
+        writer.add_scalar(f'{jobid}_{model_name}_train_batch_fold{fn}/train_loss', training_loss_overall, epoch)
+        writer.add_scalar(f'{jobid}_{model_name}_train_batch_fold{fn}/val_loss', val_loss_overall, epoch)
+        writer.add_scalar(f'{jobid}_{model_name}_train_batch_fold{fn}/learning_rate', optimizer.param_groups[0]["lr"], epoch)
         writer.flush()
 
-        epoch_len = len(str(num_epochs))
-        print_msg = (f'[{epoch:>{epoch_len}}/{num_epochs:>{epoch_len}}] ' +
-                     f'train_loss: {training_loss_overall:.5f} ' +
-                     f'validation_loss: {val_loss_overall:.5f}')
-
-        print(print_msg)
-
-        # clear lists to track next epoch
+        print(f'[{epoch}/{num_epochs}] train_loss: {training_loss_overall:.5f} validation_loss: {val_loss_overall:.5f}')
         training_loss = []
         val_loss = []
-
-        # early_stopping needs the validation loss to check if it has decreased,
-        # and if it has, it will make a checkpoint of the current model
         early_stopping(val_loss_overall, model)
 
         if early_stopping.early_stop:
             print("Early stopping")
             break
 
-    #     # load the last checkpoint with the best model
-    # model.load_state_dict(torch.load('checkpoint.pt'))
-    #
-    # torch.save(model.state_dict(), "HEAL_Workspace/models/%s_%s_fold%d.pt" % (jobid, model_name, fn))
+    # Verificar e criar diretório para salvar os gráficos
+    fig_dir = Path(f'HEAL_Workspace/figures/')
+    fig_dir.mkdir(parents=True, exist_ok=True)  # Verifica e cria o diretório de figuras se não existir
 
-    # visualize the loss as the network trained
+    # Visualize the loss as the network trained
     fig = plt.figure(figsize=(10, 8))
     plt.plot(range(1, len(avg_training_loss) + 1), avg_training_loss, label='Training Loss')
     plt.plot(range(1, len(avg_val_loss) + 1), avg_val_loss, label='Validation Loss')
-
-    # find position of lowest validation loss
     min_pos = avg_val_loss.index(min(avg_val_loss)) + 1
     plt.axvline(min_pos, linestyle='--', color='r', label='Early Stopping Checkpoint')
 
@@ -194,7 +169,10 @@ def model_train(model, model_name, train_loader, val_loader, criterion, optimize
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    fig.savefig('HEAL_Workspace/figures/%s_%s_loss_fold%d_plot.png' % (jobid, model_name, fn), bbox_inches='tight')
+    
+    # Salvar o gráfico
+    fig.savefig(fig_dir / f'{jobid}_{model_name}_loss_fold{fn}_plot.png', bbox_inches='tight')
 
-    print('%s Training finished!' % model_name)
+    print(f'{model_name} Training finished!')
     return model
+
