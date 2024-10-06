@@ -1,14 +1,10 @@
 import staintools
 from pathlib import Path
-import pandas as pd
 import re
 import os
 import cv2 as cv
-from shutil import copy
-from matplotlib import pyplot as plt
-import tqdm
+from shutil import copy2  # Usar copy2 para manter metadados
 import multiprocessing
-from pathlib import Path
 
 '''
 Function description:
@@ -16,87 +12,110 @@ Function description:
     Correct all the clear images into a unified color space;
 '''
 
-
-def image_convert(_img_path, _new_img_path):
-    template_image = Path("HEAL/Pre_processing/n6.png")
-    template_image = str(template_image.resolve())
-    target = staintools.read_image(template_image)
-    #target = staintools.LuminosityStandardizer.standardize(target)
-    normalizer = staintools.StainNormalizer(method='macenko')
-    normalizer.fit(target)
-    #print(normalizer.stain_matrix_target)
-    image = staintools.read_image(_img_path)
-    image = staintools.LuminosityStandardizer.standardize(image)
-    img = normalizer.transform(image)
-    cv.imwrite(_new_img_path, img)
-
-
 def create_new_folder(_patient_path, ori_str, replace_str):
     _new_patient_path = re.sub(ori_str, replace_str, _patient_path)
-    print(_new_patient_path)
     Path(_new_patient_path).mkdir(parents=True, exist_ok=True)
-    return (_new_patient_path)
+    return _new_patient_path
 
 
 def variance_of_laplacian(image):
-    #     compute the Laplacian of the image and then return the focus
-    #     measure, which is simply the variance of the Laplacian
     return cv.Laplacian(image, cv.CV_64F).var()
 
 
 def find_blur(imagePath):
-    imagePath = Path(imagePath)
-    imagePath = imagePath.resolve()
+    imagePath = Path(imagePath).resolve()
     image = cv.imread(str(imagePath))
+
+    if image is None:
+        print(f"Failed to read image at: {imagePath}")
+        return None, 0
 
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
     fm = variance_of_laplacian(gray)
     return image, fm
 
 
-def generate_blur_score(input_csv):
-    input_df = pd.read_csv(input_csv)
-    output_df = pd.DataFrame(columns=['Image_path', 'Label', 'Blur_score'])
 
-    out_csv = input_csv.split(".")[0] + "_blur_bak.csv"
-    print("output csv is: %s" % out_csv)
-
-    for i in range(len(input_df)):
-        _img_path = input_df['Image_path'][i]
-        _label = input_df['Label'][i]
-        img, fm = find_blur(_img_path)
-        _tmp = pd.DataFrame([[_img_path, _label, fm]], columns=['Image_path', 'Label', 'Blur_score'])
-        output_df = pd.concat([output_df, _tmp])
-    output_df.to_csv(out_csv)
-
-
-def blur_color_processing(_root, _img_path, _img):
-    print(_img_path)
+def blur_color_processing(_root, _img_path, _img, _img_path_template, _blur_threshold=100):
     img, fm = find_blur(_img_path)
-    print(fm)
-    if fm <= 100:
+    if img is None:
+        return fm  # Se a imagem não pôde ser lida, retorna diretamente
+
+    print(f"Processing: {_img_path}, Blur score: {fm}")
+
+    if fm <= _blur_threshold:
+        # Para imagens desfocadas
         blur_path = create_new_folder(_root, "tiling", "tiling_blur")
-        copy(_img_path, blur_path)
+        new_img_path = os.path.join(blur_path, _img)
+        success = copy(_img_path, new_img_path)
+        if success:
+            print(f"Blurred image moved to: {new_img_path}")
+        else:
+            print(f"Failed to move blurred image to: {new_img_path}")
     else:
+        # Para imagens nítidas
         _new_img_folder = create_new_folder(_root, "tiling", "tiling_macenko")
         _new_img_path = os.path.join(_new_img_folder, _img)
-        image_convert(_img_path, _new_img_path)
-    return (fm)
+
+        try:
+            # Processo de normalização de cor usando Macenko
+            template_image = Path(_img_path_template)
+            template_image = str(template_image.resolve())
+            target = staintools.read_image(template_image)
+
+            if target is None:
+                raise ValueError(f"Template image not found or failed to load: {template_image}")
+
+            normalizer = staintools.StainNormalizer(method='macenko')
+            normalizer.fit(target)
+
+            # Ler a imagem de entrada
+            image = staintools.read_image(_img_path)
+            if image is None:
+                raise ValueError(f"Failed to load image: {_img_path}")
+            
+            image = staintools.LuminosityStandardizer.standardize(image)
+            img = normalizer.transform(image)
+
+            # Salvar a imagem no diretório de destino
+            success = cv.imwrite(_new_img_path, img)
+            if success:
+                print(f"Image transformed and saved to: {_new_img_path}")
+            else:
+                raise IOError(f"Failed to save image at: {_new_img_path}")
+
+        except Exception as e:
+            print(f"Error during image processing: {e}")
+
+    return fm
 
 
-def pre_processing(extra_prefix=""):
+
+
+# Caminho relativo ao diretório do projeto
+relative_path = "DEMoS/HEAL/Pre_processing/n6.png"
+project_base = os.getcwd()
+# Construir o caminho absoluto
+absolute_path = os.path.join(project_base, relative_path)
+
+
+def pre_processing(extra_prefix="", _img_path_template = absolute_path):
     print("[INFO] Starting blur detection ...")
     cpu_num = multiprocessing.cpu_count()
-    print("The CPU number of this machine is %d" % cpu_num)
-    pool = multiprocessing.Pool(int(cpu_num))
+    print(f"The CPU number of this machine is {cpu_num}")
+    pool = multiprocessing.Pool(cpu_num)
+
     _image_path = "HEAL_Workspace/tiling" + str(extra_prefix)
     for _root, _dir, _imgs in os.walk(_image_path):
         _imgs = [f for f in _imgs if not f[0] == '.']
         _dir[:] = [d for d in _dir if not d[0] == '.']
+
         for idx in range(len(_imgs)):
             _img = _imgs[idx]
             _img_path = os.path.join(_root, _img)
-            pool.apply_async(blur_color_processing, (_root, _img_path, _img))
-            #blur_color_processing(_root, _img_path, _img)
+
+            # Processamento paralelo com multiprocessing
+            pool.apply_async(blur_color_processing, (_root, _img_path, _img, _img_path_template))
+
     pool.close()
     pool.join()
