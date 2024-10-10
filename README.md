@@ -14,11 +14,60 @@ The HEAL Pipeline is a comprehensive framework designed for processing and analy
 
 ## Installation
 
-To run the HEAL Pipeline, ensure you have Python and the required libraries installed. You can install the necessary packages using pip:
+To run the HEAL Pipeline, ensure you have Python 3.8 version and the required libraries installed.
+
+## Installing and Activating Python 3.8 Environment
+You can set up a Python 3.8 environment using either `conda` or Python's `venv` module. Follow the steps below based on your preferred method.
+
+### Option 1: Using `conda`
+1. Create the Python 3.8 environment:
+
+   ```bash
+   conda create --name heal_env python=3.8
+   ```
+
+2. Activate the environment:
+
+    ```bash
+    conda activate heal_env
+    ```
+### Option 2: Using `venv`
+1. Create the Python 3.8 environment:
+    ```bash
+    python3.8 -m venv heal_env
+    ```
+2. Activate the environment:
+    ```bash
+    source heal_env/bin/activate
+    ```
+
+
+### You can install the necessary packages using pip:
+
 
 ```bash
 pip install -r requirements.txt
 ```
+
+### Note: Issues with OpenSlide
+
+If you encounter issues importing OpenSlide in Python 3.8, follow the steps below to properly install the system dependencies and the `openslide-python` library:
+
+1. **Install system dependencies**: OpenSlide relies on system libraries that need to be installed. On Debian/Ubuntu-based distributions, use the following command:
+
+   ```bash
+   sudo apt-get install openslide-tools
+   sudo apt-get install python-openslide
+   ```
+
+   For other operating systems like macOS or Windows, you can download the dependencies directly from the OpenSlide website: [OpenSlide Download](https://openslide.org/download/).
+
+2. **Install the `openslide-python` library**: After installing the system dependencies, you can install the Python version of OpenSlide using `pip`:
+
+   ```bash
+   pip install openslide-python
+   ```
+
 
 ## Usage
 
