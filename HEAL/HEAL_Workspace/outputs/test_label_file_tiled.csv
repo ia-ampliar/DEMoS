@@ -1,5 +1,8 @@
 Image_path,Label
-HEAL_Workspace/tiling/train/TCGA-D7-6519-01Z-001_files/0,cin
-HEAL_Workspace/tiling/train/TCGA-D7-6519-01Z-003_files/0,not_cin
-HEAL_Workspace/tiling/train/TCGA-VQ-AA6I-01Z-009_files/0,not_cin
-HEAL_Workspace/tiling/train/TCGA-D7-6518-01Z-008_files/0,cin
+HEAL_Workspace/tiling/train/TCGA-CG-4443-01A-01-TS1_files/0,cin
+HEAL_Workspace/tiling/train/TCGA-FP-A8CX-01Z-00-DX1_files/0,cin
+HEAL_Workspace/tiling/train/TCGA-CG-5723-11A-01-TS1_files/0,nocin
+HEAL_Workspace/tiling/train/TCGA-D7-6527-01A-01-TS1_files/0,cin
+HEAL_Workspace/tiling/train/TCGA-CG-5719-01A-01-BS1_files/0,cin
+HEAL_Workspace/tiling/train/TCGA-D7-8572-01A-01-TS1_files/0,nocin
+HEAL_Workspace/tiling/train/TCGA-D7-6817-01A-01-BS1_files/0,cin

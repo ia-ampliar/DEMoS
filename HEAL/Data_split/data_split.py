@@ -26,29 +26,24 @@ def save_variable(var, filename):
     pickle_f.close()
     return filename
 
-
 def customized_drop(_df):
-    absent_count = 0
-    empty_count = 0
+    drop_idx = []
     for i in range(len(_df)):
         _ori_folder_path = _df.iloc[i, 0]
         _folder_path = re.sub('tiling', 'tiling_macenko', _ori_folder_path)
+        
+        print(f"Checking folder: {_folder_path}")  # Adicione esta linha para verificar o caminho
 
-        # Verifica se o diretório existe
         if not os.path.exists(_folder_path):
             print(f"Folder does not exist: {_folder_path}")
-            absent_count += 1
-        # Verifica se o diretório está vazio
+            drop_idx.append(i)
         elif not os.listdir(_folder_path):
             print(f"Folder is empty: {_folder_path}")
-            empty_count += 1
+            drop_idx.append(i)
 
-    # Relatório final sobre os diretórios ausentes e vazios
-    print(f"Total folders that do not exist: {absent_count}")
-    print(f"Total folders that are empty: {empty_count}")
-
-    return _df  # Retorna o DataFrame original sem alterações
-
+    _df = _df.drop(index=drop_idx)
+    _df = _df.reset_index(drop=True)
+    return _df
 
 
 def read_files(train_label_file, test_label_file):
@@ -76,7 +71,7 @@ def read_files(train_label_file, test_label_file):
         test_df = None
 
     print("The original train file length is %d." % len(train_df))
-    train_df = customized_drop(train_df) # descomentar caso haja necessidade, mas esse trecho está quebrando o código pois deixar o train_df vazio
+    train_df = customized_drop(train_df)
     print("The wrangled train file length is %d." % len(train_df))
 
     if test_df is not None:
@@ -110,6 +105,7 @@ def read_files(train_label_file, test_label_file):
         plt.close()
 
     return train_df, test_df, MLMC
+
 
 
 def find_files(ori_folder_path, label):
@@ -217,48 +213,56 @@ def split_data(train_df, test_df, test_ratio, MLMC):
 train_img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
 val_img_label_df = pd.DataFrame(columns=['Image_path', 'Label'])
 
+
 def write_train_file(train_df, train_indices, val_indices):
+
     train_val_df = pd.DataFrame(columns=['Image_path', 'Label', 'type', 'fold'])
-    
-    # Processa cada fold
     for i in range(10):
         train_index = train_indices[i]
         val_index = val_indices[i]
         train = train_df.iloc[train_index]
         val = train_df.iloc[val_index]
+        def append_result(result):
+            global train_img_label_df
+            train_img_label_df = pd.concat([train_img_label_df, result])
 
-        # Processa o conjunto de treinamento
-        global train_img_label_df
+        cpu_num = multiprocessing.cpu_count()
+        print("The CPU number of this machine is %d" % cpu_num)
+        pool = multiprocessing.Pool(int(cpu_num))
+        #pool = multiprocessing.Pool(16)
+
         for idx in tqdm.tqdm(range(len(train))):
             label = train.iloc[idx, 1]
             folder_path = train.iloc[idx, 0]
-            result = find_files(folder_path, label)
-            train_img_label_df = pd.concat([train_img_label_df, result])
+            #if('F4' in folder_path.split('-')):
+            pool.apply_async(find_files, args = (folder_path, label), callback = append_result)
 
-        # Salva o CSV com as imagens e rótulos
-        train_img_label_df.to_csv(f"HEAL_Workspace/outputs/train_fold_{i}.csv", encoding='utf-8', index=False)
+        pool.close()
+        pool.join()
+        global train_img_label_df
+        train_img_label_df.to_csv("HEAL_Workspace/outputs/train_fold_%d.csv" % i, encoding='utf-8', index=False)
         train_img_label_df = train_img_label_df.iloc[0:0]
 
-        # Processa o conjunto de validação
-        global val_img_label_df
+        cpu_num = multiprocessing.cpu_count()
+        print("The CPU number of this machine is %d" % cpu_num)
+        pool = multiprocessing.Pool(int(cpu_num))
+        #pool = multiprocessing.Pool(16)
+        def append_result(result):
+            global val_img_label_df
+            val_img_label_df = pd.concat([val_img_label_df, result])
         for idx in tqdm.tqdm(range(len(val))):
             label = val.iloc[idx, 1]
             folder_path = val.iloc[idx, 0]
-            result = find_files(folder_path, label)
-            val_img_label_df = pd.concat([val_img_label_df, result])
-
-        # Salva o CSV com as imagens e rótulos de validação
-        val_img_label_df.to_csv(f"HEAL_Workspace/outputs/val_fold_{i}.csv", encoding='utf-8', index=False)
+            pool.apply_async(find_files, args = (folder_path, label), callback = append_result)
+        pool.close()
+        pool.join()
+        global val_img_label_df
+        val_img_label_df.to_csv("HEAL_Workspace/outputs/val_fold_%d.csv" % i, encoding='utf-8', index=False)
         val_img_label_df = val_img_label_df.iloc[0:0]
 
 
 def data_split(train_label_file, test_label_file=None, test_ratio=0.2):
     train_df, test_df, MLMC = read_files(train_label_file, test_label_file)
-
-    # Verifique se o DataFrame train_df não está vazio
-    print(f"train_df shape: {train_df.shape}")
-    if train_df.empty:
-        raise ValueError("train_df está vazio. Verifique o arquivo de entrada.")
 
     if not MLMC:
         show_tiles_distribution(train_df)
