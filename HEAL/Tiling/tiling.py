@@ -15,7 +15,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-import os
 import tqdm
 import pandas as pd
 from Tiling import open_slide

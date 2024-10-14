@@ -1,6 +1,5 @@
 Image_path,Label
-HEAL_Workspace/tiling_macenko/train/TCGA-CG-5721-11A-01-TS1_files/0/1_1.jpeg,nocin
-HEAL_Workspace/tiling_macenko/train/TCGA-CG-5732-01A-01-BS1_files/0/1_1.jpeg,cin
-HEAL_Workspace/tiling_macenko/train/TCGA-CG-5732-01A-01-BS1_files/0/1_2.jpeg,cin
-HEAL_Workspace/tiling_macenko/train/TCGA-CG-5720-01A-01-BS1_files/0/1_1.jpeg,cin
-HEAL_Workspace/tiling_macenko/train/TCGA-CG-5720-01A-01-BS1_files/0/2_1.jpeg,cin
+HEAL_Workspace/tiling_macenko/train/TCGA-D7-6522-01A-01-BS1_files/0/1_1.jpeg,nocin
+HEAL_Workspace/tiling_macenko/train/TCGA-IP-7968-01A-01-TS1_files/0/1_2.jpeg,cin
+HEAL_Workspace/tiling_macenko/train/TCGA-IP-7968-01A-01-TS1_files/0/1_1.jpeg,cin
+HEAL_Workspace/tiling_macenko/train/TCGA-CG-4443-01A-01-TS1_files/0/1_1.jpeg,cin

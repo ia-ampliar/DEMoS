@@ -1,16 +1,11 @@
 import pickle
 import time
 from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-from Hyperparameter_optimisation import Hyperopt_train
+from HEAL.Hyperparameter_optimisation import Hyperopt_train
 import numpy as np
-import torch
-
-# Liberar cache de memória antes de cada treinamento
-torch.cuda.empty_cache()
 
 
-
-BATCH_LIST = [4, 8, 12, 16]
+BATCH_LIST = [4, 8, 16]
 STEP_SIZE_LIST = np.arange(3, 10, dtype=int)
 
 def save_variable(var, filename):
