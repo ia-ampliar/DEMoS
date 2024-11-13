@@ -71,7 +71,7 @@ If you encounter issues importing OpenSlide in Python 3.8, follow the steps belo
 3. If you have using aws and have troble happend, run this code below for to solve:
 
      ```bash
-        !conda install -c conda-forge openslide-python
+     conda install -c conda-forge openslide-python
      ```
 
 
