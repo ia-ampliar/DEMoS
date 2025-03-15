@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 
 import pickle
-
+import csv
 import numpy as np
 import pandas as pd
 import torch
@@ -13,25 +13,15 @@ from torch import optim
 from torch.optim import lr_scheduler
 from torch.utils.data import Dataset, DataLoader
 from torchvision import models, transforms
+import pathlib
+import os
 
-from Training import model_train
-from Training import create_test_tiles
 
-import staintools
-#import pysnooper
-import pip
+SAMPLE_SIZE = 0.2
+TEST_SIZE = 1000
+TEST_EPOCHS = 10
 
-def install(package):
-    if hasattr(pip, 'main'):
-        pip.main(['install', package])
-    else:
-        pip._internal.main(['install', package])
 
-try:
-    from efficientnet_pytorch import EfficientNet
-except ImportError:
-    install('efficientnet_pytorch')
-    from efficientnet_pytorch import EfficientNet
 
 def save_variable(var, filename):
     pickle_f = open(filename, 'wb')
@@ -45,6 +35,21 @@ def load_variable(filename):
     var = pickle.load(pickle_f)
     pickle_f.close()
     return var
+
+
+train_data_transforms = transforms.Compose([
+    transforms.Resize(size=(512, 512)),
+    transforms.RandomRotation(5),
+    transforms.RandomVerticalFlip(),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor()
+    #transforms.Normalize([0.7070, 0.5345, 0.6812], [0.1649, 0.2027, 0.1498])
+])
+data_transforms = transforms.Compose([
+    transforms.Resize(size=(512, 512)),
+    transforms.ToTensor()
+    #transforms.Normalize([0.7070, 0.5345, 0.6812], [0.1649, 0.2027, 0.1498])
+])
 
 
 def convert_label(_label, _mode, _class_num, _class_cate):
@@ -73,7 +78,6 @@ class ImageDataset(Dataset):
     def __len__(self):
         return len(self.dataframe)
 
-    #@pysnooper.snoop()
     def __getitem__(self, idx):
         img_path = self.dataframe.iloc[idx, 0]
         image = io.imread(img_path)
@@ -86,26 +90,15 @@ class ImageDataset(Dataset):
         return sample
 
 
-def load_data(_class_cate, _class_number, _work_mode, _bs, fn = 0):
-    train_data_transforms = transforms.Compose([
-        transforms.Resize(size=(Image_Size, Image_Size)),
-        transforms.RandomVerticalFlip(),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor()
-    ])
-    data_transforms = transforms.Compose([
-        transforms.Resize(size=(Image_Size, Image_Size)),
-        transforms.ToTensor()
-    ])
-    create_test_tiles.create_test_files()
-    train_img_label_df = pd.read_csv("/mnt/efs-tcga/HEAL_Workspace/outputs/train_fold_{}.csv".format(fn))
-    val_img_label_df = pd.read_csv("/mnt/efs-tcga/HEAL_Workspace/outputs/val_fold_{}.csv".format(fn))
+def load_data(_class_cate, _class_number, _work_mode, bs):
+    train_img_label_df = pd.read_csv("HEAL_Workspace/outputs/train_fold_0.csv")
+    val_img_label_df = pd.read_csv("HEAL_Workspace/outputs/val_fold_0.csv")
     train_dataset = ImageDataset(dataframe=train_img_label_df, transform=train_data_transforms,
                                  class_cate=_class_cate, class_num=_class_number, mode=_work_mode)
     val_dataset = ImageDataset(dataframe=val_img_label_df, transform=data_transforms,
                                class_cate=_class_cate, class_num=_class_number, mode=_work_mode)
-    train_loader = DataLoader(train_dataset, batch_size=_bs, shuffle=True, num_workers=8)
-    val_loader = DataLoader(val_dataset, batch_size=_bs, shuffle=False, num_workers=8)
+    train_loader = DataLoader(train_dataset, batch_size=bs, shuffle=True, num_workers=4)
+    val_loader = DataLoader(val_dataset, batch_size=bs, shuffle=False, num_workers=4)
     return train_loader, val_loader
 
 
@@ -340,98 +333,66 @@ def get_model(_model_name, _class_num, _mode):
             criterion = nn.CrossEntropyLoss()
         model = torch.nn.DataParallel(model)
         return model, criterion
-    elif _model_name == "EFF-NET":
-        model = EfficientNet.from_name('efficientnet-b1')
-        for param in model.parameters():
-            param.requires_grad = True
-
-        num_ftrs = model._fc.in_features
-
-        if _mode:
-            model._fc = nn.Sequential(nn.Linear(num_ftrs, _class_num), nn.Sigmoid())
-            criterion = nn.BCELoss()
-        else:
-            model._fc = nn.Linear(num_ftrs, _class_num)
-            criterion = nn.CrossEntropyLoss()
-        model = torch.nn.DataParallel(model)
-        return model, criterion
 
 
-def get_weight(_class_cate, _class_number, _mode):
-    weights = []
-    if _mode:
-        for i in range(_class_number):
-            weights.append(1)
-    else:
-        train_df = pd.read_csv("/mnt/efs-tcga/HEAL_Workspace/outputs/train_fold_0.csv")
-        _class_c = list(_class_cate)
-        num_count = []
-        for _cc in _class_c:
-            tmp_count = train_df.loc[train_df.Label == _cc]
-            num_count.append(len(tmp_count))
-        max_num = max(num_count)
-        for _w in num_count:
-            weights.append(_w/max_num)
-    return weights
+def train(model, optimizer, train_loader, criterion, scheduler, _mode, device):
+    model.train()
+    for epoch in range(TEST_EPOCHS):
+        for i, sample in enumerate(train_loader, 0):
+            if i * len(sample) > SAMPLE_SIZE * len(train_loader.dataset):
+                break
+            inputs = sample["image"].to(device)
+            if _mode:
+                labels = sample["label"].to(device).float()
+            else:
+                labels = sample["label"].to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+        scheduler.step()
+    return
 
-Image_Size = 0
-def train(_models, tile_size = 512, CV_Enable = False):
-    global Image_Size
-    Image_Size = tile_size
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(device)
-    conf_dict = load_variable("/mnt/efs-tcga/HEAL_Workspace/outputs/parameter.conf")
-    _work_mode = conf_dict["Mode"]
-    _class_cate = conf_dict["Classes"]
-    _class_number = conf_dict["Class_number"]
-    try:
-        hp_dict = load_variable("/mnt/efs-tcga/HEAL_Workspace/outputs/hyper_parameter.conf")
-        _lr = hp_dict['lr']
-        _gamma = hp_dict['gamma']
-        _models = [hp_dict['model_name']]
-        _step_size = hp_dict['step_size']
-        _bs = hp_dict['batch_size']
-        print("Hyperparameters optimized by Hyperopt are using for model training, "
-              "if you want to use your customized hyperparameter, please delete "
-              "the configuration file: /mnt/efs-tcga/HEAL_Workspace/outputs/parameter.conf")
-        print("----------------Configuration-----------------")
-        print("Model architecture: {}".format(_models))
-        print("Batch size: {}".format(_bs))
-        print("Learning rate: {}".format(_lr))
-        print("Gamma: {}".format(_gamma))
-        print("Step size: {}".format(_step_size))
-        print("----------------------------------------------")
-    except Exception as e:
-        print(e)
-        print("No optimal hyper parameters found, default parameters are being used for model training ...")
-        _lr = 1e-3
-        _bs = 64
-        _gamma = 0.4
-        _step_size = 5
-        print("----------------Default configuration-----------------")
-        print("Model architecture: {}".format(_models))
-        print("Batch size: {}".format(_bs))
-        print("Learning rate: {}".format(_lr))
-        print("Gamma: {}".format(_gamma))
-        print("Step size: {}".format(_step_size))
-        print("----------------------------------------------")
 
-    for _model in _models:
-        if(CV_Enable):
-            for i in range(10):
-                train_loader, val_loader = load_data(_class_cate, _class_number, _work_mode, _bs, fn=i)
-                model_ft, criterion = get_model(_model, _class_number, _work_mode)
-                optimizer_ft = optim.Adam(model_ft.parameters(), lr=_lr, weight_decay=1e-4)
-                #exp_lr_scheduler = lr_scheduler.MultiStepLR(optimizer_ft, milestones=[10, 30, 50, 80], gamma=_gamma)
-                exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_ft, "min", factor=0.5, patience=3, threshold=1e-8)
-                model_train.model_train(model_ft, _model, train_loader, val_loader, criterion,
-                                        optimizer_ft, exp_lr_scheduler, _work_mode, _class_number, num_epochs=100, fn=i)
-                torch.cuda.empty_cache()
-        else:
-            train_loader, val_loader = load_data(_class_cate, _class_number, _work_mode, _bs)
-            model_ft, criterion = get_model(_model, _class_number, _work_mode)
-            optimizer_ft = optim.Adam(model_ft.parameters(), lr=_lr, weight_decay=1e-4)
-            #exp_lr_scheduler = lr_scheduler.MultiStepLR(optimizer_ft, milestones=[10, 30, 50, 80], gamma=_gamma)
-            exp_lr_scheduler = lr_scheduler.ReduceLROnPlateau(optimizer_ft, "min", factor=0.5, patience=3, threshold=1e-8)
-            model_train.model_train(model_ft, _model, train_loader, val_loader, criterion, optimizer_ft, exp_lr_scheduler, _work_mode, _class_number, num_epochs=100)
+def test(model, val_loader, criterion, _mode, device):
+    model.eval()
+    running_loss = 0.0
+    n_total = 0
+    with torch.no_grad():
+        for i, sample in enumerate(val_loader, 0):
+            if i * len(sample) > TEST_SIZE:
+                break
+            inputs = sample["image"].to(device)
+            if _mode:
+                labels = sample["label"].to(device).float()
+            else:
+                labels = sample["label"].to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            running_loss += loss.item()
+            n_total += 1
+    return running_loss/n_total
+
+
+class HyperoptTrain:
+    def __init__(self, model_name, learning_rate, step_size, _gamma, batch_size):
+        try:
             torch.cuda.empty_cache()
+        except:
+            print("Failed to clean the GPU cache.")
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.conf_dict = load_variable("HEAL_Workspace/outputs/parameter.conf")
+        self._work_mode = self.conf_dict["Mode"]
+        self._class_cate = self.conf_dict["Classes"]
+        self._class_number = self.conf_dict["Class_number"]
+        self.train_loader, self.val_loader = load_data(self._class_cate, self._class_number, self._work_mode, batch_size)
+        self.model_ft, self.criterion = get_model(model_name, self._class_number, self._work_mode)
+        self.model_ft = self.model_ft.to(self.device)
+        self.optimizer_ft = optim.Adam(self.model_ft.parameters(), lr=learning_rate)
+        self.exp_lr_scheduler = optim.lr_scheduler.StepLR(self.optimizer_ft, step_size=step_size, gamma=_gamma)
+
+    def train_model(self):
+        train(self.model_ft, self.optimizer_ft, self.train_loader, self.criterion, self.exp_lr_scheduler, self._work_mode, self.device)
+        val_loss = test(self.model_ft, self.val_loader, self.criterion, self._work_mode, self.device)
+        return val_loss
