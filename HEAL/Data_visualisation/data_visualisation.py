@@ -15,19 +15,6 @@ from collections import Counter
 from PIL import Image
 
 def save_variable(var, filename):
-    """Save a variable to a file using pickle serialization.
-
-    This function serializes a given variable and writes it to a specified file in binary format 
-    using the pickle module. It facilitates the storage of Python objects for later retrieval by 
-    returning the filename where the variable has been saved.
-
-    Args:
-        var (any): The variable to be saved to a file.
-        filename (str): The name of the file where the variable will be stored.
-
-    Returns:
-        str: The filename where the variable has been saved.
-    """
     pickle_f = open(filename, 'wb')
     pickle.dump(var, pickle_f)
     pickle_f.close()
@@ -35,17 +22,6 @@ def save_variable(var, filename):
 
 
 def load_variable(filename):
-    """Load a variable from a file using pickle serialization.
-
-    This function opens a specified file in binary read mode and uses the pickle module to 
-    deserialize the contents into a Python variable. It returns the loaded variable for further use.
-
-    Args:
-        filename (str): The path to the file from which the variable will be loaded.
-
-    Returns:
-        any: The deserialized variable loaded from the specified file.
-    """
     pickle_f = open(filename, 'rb')
     var = pickle.load(pickle_f)
     pickle_f.close()
@@ -53,24 +29,6 @@ def load_variable(filename):
 
 
 def plot_confusion_matrix(y_true, y_pred, classes, normalize=True, title=None, cmap=plt.cm.Blues, fig_name="Confusion_matrix.png"):
-    """Plot and save a confusion matrix for classification results.
-
-    This function computes and visualizes a confusion matrix based on the true and predicted labels 
-    of a classification model. It provides options for normalization and allows customization of the 
-    plot's title and color map, saving the resulting figure to a specified file.
-
-    Args:
-        y_true (numpy.ndarray): True labels of the data, with shape (n_samples, n_classes).
-        y_pred (numpy.ndarray): Predicted labels from the model, with shape (n_samples, n_classes).
-        classes (list): List of class names corresponding to the labels.
-        normalize (bool, optional): Whether to normalize the confusion matrix. Defaults to True.
-        title (str, optional): Title for the confusion matrix plot. Defaults to None.
-        cmap (matplotlib.colors.Colormap, optional): Colormap for the plot. Defaults to plt.cm.Blues.
-        fig_name (str, optional): Filename for saving the figure. Defaults to "Confusion_matrix.png".
-
-    Returns:
-        matplotlib.axes.Axes: The axes object with the confusion matrix plot.
-    """
     plt.close('all')
     plt.figure(figsize=(8, 8), dpi=400)
     if not title:
@@ -117,23 +75,6 @@ def plot_confusion_matrix(y_true, y_pred, classes, normalize=True, title=None, c
 
 
 def plot_roc_curve(pred_y, test_y, class_label, n_classes, fig_name="roc_auc.png", title="ROC curve of HEAL"):
-    """Plot the Receiver Operating Characteristic (ROC) curve for multi-class classification.
-
-    This function computes and visualizes the ROC curve for each class in a multi-class classification 
-    problem based on the predicted and true labels. It calculates the area under the curve (AUC) for 
-    each class and saves the resulting plot to a specified file.
-
-    Args:
-        pred_y (numpy.ndarray): Predicted probabilities for each class, with shape (n_samples, n_classes).
-        test_y (numpy.ndarray): True labels for the test set, with shape (n_samples, n_classes).
-        class_label (list): List of class names corresponding to the labels.
-        n_classes (int): The number of classes in the classification problem.
-        fig_name (str, optional): Filename for saving the ROC curve figure. Defaults to "roc_auc.png".
-        title (str, optional): Title for the ROC curve plot. Defaults to "ROC curve of HEAL".
-
-    Returns:
-        None
-    """
     colors = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#66CC99", "#999999"]
     plt.close('all')
     plt.style.use("ggplot")
@@ -157,21 +98,6 @@ def plot_roc_curve(pred_y, test_y, class_label, n_classes, fig_name="roc_auc.png
 
 
 def cv_result_detect(result_list):
-    """Detect cross-validation results from a list of result file paths.
-
-    This function analyzes a list of result file paths to identify unique job IDs and categorize them 
-    into cross-validation IDs and single-run IDs based on the number of folds present in the results. 
-    It returns two lists: one containing job IDs with sufficient cross-validation folds and another 
-    for those with insufficient folds.
-
-    Args:
-        result_list (list): A list of file paths representing the results from different jobs.
-
-    Returns:
-        tuple: A tuple containing two lists:
-            - cv_ids (list): A list of job IDs that have sufficient cross-validation folds.
-            - single_ids (list): A list of job IDs that have insufficient cross-validation folds.
-    """
     jobids = []
     cv_ids = []
     single_ids = []
@@ -205,26 +131,6 @@ def cv_result_detect(result_list):
 
 
 def patient_level_results(tile_result_dict):
-    """Aggregate tile-level predictions and labels to patient-level results.
-
-    This function processes a dictionary containing tile-level predictions, labels, and image paths 
-    to compile results at the patient level. It extracts unique patient IDs from the image paths, 
-    averages the predictions for each patient, and returns a structured dictionary with patient-level 
-    predictions, labels, and IDs.
-
-    Args:
-        tile_result_dict (dict): A dictionary containing the following keys:
-            - "preds": A list or array of tile-level predictions.
-            - "labels": A list or array of tile-level labels.
-            - "sample_path": A list of image paths corresponding to the tiles.
-
-    Returns:
-        tuple: A tuple containing:
-            - patient_results (dict): A dictionary with keys "preds", "labels", and "sample_path" 
-              representing patient-level predictions, labels, and IDs.
-            - new_patient_preds (numpy.ndarray): An array of averaged predictions for each patient.
-            - new_patient_labels (numpy.ndarray): An array of labels for each patient.
-    """
     preds = tile_result_dict["preds"]
     labels = tile_result_dict["labels"]
     img_paths = tile_result_dict["sample_path"]
@@ -258,22 +164,6 @@ def patient_level_results(tile_result_dict):
 
 
 def plot_single_roc_confusion_matrix(results, class_cate, n_class, _work_mode):
-    """Generate and save ROC curves and confusion matrices for model results.
-
-    This function processes a list of result file paths to create and save ROC curves and confusion 
-    matrices for both tile-level and patient-level predictions. It loads the prediction results, 
-    computes the necessary metrics, and saves the visualizations and patient-level results to specified 
-    file paths.
-
-    Args:
-        results (list): A list of file paths to result files containing predictions and labels.
-        class_cate (list): A list of class names corresponding to the labels.
-        n_class (int): The number of classes in the classification problem.
-        _work_mode (bool): A flag indicating whether to include confusion matrix plots.
-
-    Returns:
-        None
-    """
     for res in results:
         base_name = str(res.split("/")[-1]).split(".")[0]
         fig_name = "HEAL_Workspace/figures/{}_tile_level_ROC.png".format(base_name)
@@ -300,23 +190,6 @@ def plot_single_roc_confusion_matrix(results, class_cate, n_class, _work_mode):
 
 
 def plot_roc_ms(cv_result_list, class_cate, n_classes, fig_name):
-    """Plot mean ROC curves with standard deviation for multi-class classification.
-
-    This function computes and visualizes the mean Receiver Operating Characteristic (ROC) curves 
-    for each class based on cross-validation results. It aggregates the true positive rates and 
-    false positive rates across multiple results, displaying the mean ROC curve along with the 
-    standard deviation as a shaded area.
-
-    Args:
-        cv_result_list (list): A list of file paths to cross-validation result files containing 
-            predictions and labels.
-        class_cate (list): A list of class names corresponding to the labels.
-        n_classes (int): The number of classes in the classification problem.
-        fig_name (str): The filename for saving the ROC curve figure.
-
-    Returns:
-        None
-    """
     colors = ["#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7", "#000000", "#66CC99", "#999999"]
     class_label = class_cate
     base_fpr = np.linspace(0, 1, 1001)
@@ -360,21 +233,6 @@ def plot_roc_ms(cv_result_list, class_cate, n_classes, fig_name):
 
 
 def plot_cv_roc(cv_results, result_list, class_cate, n_classes):
-    """Generate and save ROC curves for cross-validation results at tile and patient levels.
-
-    This function processes a list of cross-validation results to create and save ROC curves for 
-    both tile-level and patient-level predictions. It constructs appropriate file paths for the 
-    results and utilizes the `plot_roc_ms` function to visualize the ROC curves for each level.
-
-    Args:
-        cv_results (list): A list of cross-validation result identifiers.
-        result_list (list): A list of file paths to result files containing predictions and labels.
-        class_cate (list): A list of class names corresponding to the labels.
-        n_classes (int): The number of classes in the classification problem.
-
-    Returns:
-        None
-    """
     for cv_result in cv_results:
         # tile level
         _idx = [index for index, value in enumerate(result_list) if cv_result in value]
@@ -400,20 +258,6 @@ def plot_cv_roc(cv_results, result_list, class_cate, n_classes):
 
 
 def get_row_col(_img_path):
-    """Extract row and column indices from image file paths.
-
-    This function takes a list of image file paths and parses the filenames to extract the row 
-    and column indices encoded in the filename. It returns two lists: one for the column indices 
-    and another for the row indices.
-
-    Args:
-        _img_path (list): A list of image file paths.
-
-    Returns:
-        tuple: A tuple containing two lists:
-            - _col_list (list): A list of column indices extracted from the filenames.
-            - _row_list (list): A list of row indices extracted from the filenames.
-    """
     _col_list = []
     _row_list = []
     # print(_img_path_df.iloc[:, 0])
@@ -428,26 +272,6 @@ def get_row_col(_img_path):
 
 
 def concat_img(patient_id, _class_cate, _class_dict, UNIT_SIZE, col_list, row_list, y_pred, label, img_dirs):
-    """Create and save a concatenated image with predicted labels and heatmap visualization.
-
-    This function generates a composite image by combining individual tile images based on their 
-    predicted classes and overlays a heatmap to visualize the predictions. It also saves the 
-    resulting image with appropriate titles and color coding based on the predicted and true labels.
-
-    Args:
-        patient_id (str): The identifier for the patient whose images are being processed.
-        _class_cate (list): A list of class categories corresponding to the labels.
-        _class_dict (dict): A dictionary mapping class names to their respective indices.
-        UNIT_SIZE (int): The size of each tile in the composite image.
-        col_list (list): A list of column indices for each tile's position.
-        row_list (list): A list of row indices for each tile's position.
-        y_pred (numpy.ndarray): An array of predicted probabilities for each class.
-        label (list): A list of true labels for the tiles.
-        img_dirs (list): A list of file paths to the tile images.
-
-    Returns:
-        None
-    """
     try:
         file_name = img_dirs[0].split('/')[-3]
     except Exception as e:
@@ -517,22 +341,6 @@ def concat_img(patient_id, _class_cate, _class_dict, UNIT_SIZE, col_list, row_li
 
 
 def plot_conc_heatmap(result_list, img_size, _class_number, _class_cate, _class_dict):
-    """Generate and save concatenated heatmaps for patient-level predictions.
-
-    This function processes a list of result files to create heatmaps that visualize the predictions 
-    for each patient based on their associated tile images. It aggregates the predictions and labels 
-    for each patient, constructs the necessary image layout, and saves the resulting heatmap images.
-
-    Args:
-        result_list (list): A list of file paths to result files containing predictions and labels.
-        img_size (int): The size of each tile in the concatenated heatmap.
-        _class_number (int): The number of classes in the classification problem.
-        _class_cate (list): A list of class categories corresponding to the labels.
-        _class_dict (dict): A dictionary mapping class names to their respective indices.
-
-    Returns:
-        None
-    """
     for res in result_list:
         result_dict = load_variable(res)
         preds = result_dict["preds"]
@@ -557,19 +365,6 @@ def plot_conc_heatmap(result_list, img_size, _class_number, _class_cate, _class_
 
 
 def data_visualisation(_tile_info):
-    """Perform data visualization for tile and patient-level results.
-
-    This function loads configuration parameters, retrieves result file paths, and generates visualizations 
-    such as ROC curves and confusion matrices for both tile-level and patient-level predictions. It also 
-    detects cross-validation results and plots the corresponding metrics to provide insights into the model's 
-    performance.
-
-    Args:
-        _tile_info (tuple): A tuple containing information about tile size and other relevant parameters.
-
-    Returns:
-        None
-    """
     conf_dict = load_variable("HEAL_Workspace/outputs/parameter.conf")
     _work_mode = conf_dict["Mode"]
     _class_cate = list(conf_dict["Classes"])
