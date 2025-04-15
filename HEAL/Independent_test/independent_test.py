@@ -28,7 +28,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import time
 from Independent_test import extra_tiling
-from Pre_processing import pre_processing
+from HEAL.Pre_processing import pre_processing2
 from Independent_test import create_test_file
 from Training import train
 
@@ -155,7 +155,7 @@ def independent_test(_models, _tile_info, extra_test_set=None, pre_processing_en
         if pre_processing_enable:
             if not os.path.exists("HEAL_Workspace/tiling_macenko/extra_test"):
                 print("Pre-processing for external data")
-                pre_processing.pre_processing(extra_prefix="/extra_test")
+                pre_processing2.pre_processing(extra_prefix="/extra_test")
             ori_e_test_file = final_test_file
             dst_e_test_file = "HEAL_Workspace/outputs/extra_test_file_preprocessed.csv"
             pre_flag = create_test_file.create_test_files(ori_test_file=ori_e_test_file, dst_test_file=dst_e_test_file)

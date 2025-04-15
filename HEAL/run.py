@@ -2,7 +2,7 @@ import argparse
 import pickle
 import os  # Importação para verificar a existência dos arquivos
 from Tiling import tiling
-from Pre_processing import pre_processing
+from HEAL.Pre_processing import pre_processing2
 from Data_split import data_split
 from Training import train
 from Independent_test import independent_test
@@ -109,7 +109,7 @@ def run(**kwargs):
         elif _proc == "Pre_processing":
             print("[INFO] Image pre-processing: color correction and blur detection ...")
             _img_path_template = input("Please input the path of the template image: ")
-            pre_processing.pre_processing(_img_path_template=_img_path_template)
+            pre_processing2.pre_processing(_img_path_template=_img_path_template)
         elif _proc == "Data_split":
             print("[INFO] Data split ...")
             data_split.data_split(_label_file_tiled, _test_label_file_tiled, test_ratio=0.5)

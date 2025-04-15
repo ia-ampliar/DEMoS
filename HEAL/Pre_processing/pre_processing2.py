@@ -3,54 +3,59 @@ from pathlib import Path
 import re
 import os
 import cv2 as cv
+from shutil import copy2  # Usar copy2 para manter metadados
 import multiprocessing
-import numpy as np
+
+'''
+Function description:
+    Detect the blurred images and move them to a backup directory;
+    Correct all the clear images into a unified color space;
+'''
 
 def create_new_folder(_patient_path, ori_str, replace_str):
     _new_patient_path = re.sub(ori_str, replace_str, _patient_path)
     Path(_new_patient_path).mkdir(parents=True, exist_ok=True)
     return _new_patient_path
 
+
 def variance_of_laplacian(image):
-    # Converte a imagem para escala de cinza na CPU
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
-    # Aplica o Laplacian na CPU
-    laplacian = cv.Laplacian(gray, cv.CV_64F)
-    # Calcula a variância
-    return laplacian.var()
+    return cv.Laplacian(image, cv.CV_64F).var()
+
 
 def find_blur(imagePath):
     imagePath = Path(imagePath).resolve()
-    # Carrega a imagem na CPU
     image = cv.imread(str(imagePath))
 
     if image is None:
         print(f"Failed to read image at: {imagePath}")
         return None, 0
 
-    # Calcula o desfoque na CPU
-    fm = variance_of_laplacian(image)
+    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
+    fm = variance_of_laplacian(gray)
     return image, fm
 
-def blur_color_processing(_root, _img_path, _img, _img_path_template, _blur_threshold=1000):
-    image, fm = find_blur(_img_path)
-    if image is None:
+
+
+def blur_color_processing(_root, _img_path, _img, _img_path_template, _blur_threshold=100):
+    img, fm = find_blur(_img_path)
+    if img is None:
         return fm  # Se a imagem não pôde ser lida, retorna diretamente
 
     print(f"Processing: {_img_path}, Blur score: {fm}")
 
     if fm <= _blur_threshold:
-        # Não armazenar imagens desfocadas
-        print(f"Image is blurred and will not be saved: {_img_path}")
+        # Para imagens desfocadas
+        blur_path = create_new_folder(_root, "tiling", "tiling_blur")
+        new_img_path = os.path.join(blur_path, _img)
+        success = copy(_img_path, new_img_path)
+        if success:
+            print(f"Blurred image moved to: {new_img_path}")
+        else:
+            print(f"Failed to move blurred image to: {new_img_path}")
     else:
         # Para imagens nítidas
         _new_img_folder = create_new_folder(_root, "tiling", "tiling_macenko")
         _new_img_path = os.path.join(_new_img_folder, _img)
-
-        # Verifica se a imagem já existe no diretório de destino
-        if os.path.exists(_new_img_path):
-            print(f"Image already exists, skipping: {_new_img_path}")
-            return fm
 
         try:
             # Processo de normalização de cor usando Macenko
@@ -84,19 +89,23 @@ def blur_color_processing(_root, _img_path, _img, _img_path_template, _blur_thre
 
     return fm
 
+
+
+
 # Caminho relativo ao diretório do projeto
-relative_path = "/mnt/efs-tcga/DEMoS/HEAL/Pre_processing/img_template.png"
+relative_path = "DEMoS/HEAL/Pre_processing/n6.png"
 project_base = os.getcwd()
 # Construir o caminho absoluto
 absolute_path = os.path.join(project_base, relative_path)
 
-def pre_processing(extra_prefix="", _img_path_template=absolute_path):
+
+def pre_processing(extra_prefix="", _img_path_template = absolute_path):
     print("[INFO] Starting blur detection ...")
     cpu_num = multiprocessing.cpu_count()
     print(f"The CPU number of this machine is {cpu_num}")
     pool = multiprocessing.Pool(cpu_num)
 
-    _image_path = "/mnt/efs-tcga/HEAL_Workspace/tiling" + str(extra_prefix)
+    _image_path = "HEAL_Workspace/tiling" + str(extra_prefix)
     for _root, _dir, _imgs in os.walk(_image_path):
         _imgs = [f for f in _imgs if not f[0] == '.']
         _dir[:] = [d for d in _dir if not d[0] == '.']
